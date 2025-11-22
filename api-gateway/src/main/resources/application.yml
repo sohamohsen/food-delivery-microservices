@@ -1,0 +1,46 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true  # Auto-discover services from Eureka
+      routes:
+        # Route for user-service
+        - id: user-service
+          uri: lb://user-service  # 'lb' = load balance via Eureka
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - StripPrefix=1  # Remove /api from path when forwarding
+
+        # Route for service discovery (Eureka dashboard)
+        - id: eureka-server
+          uri: http://localhost:8761
+          predicates:
+            - Path=/eureka/**
+
+        # Health check route for gateway itself
+        - id: gateway-health
+          uri: http://localhost:8080
+          predicates:
+            - Path=/gateway/health
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/  # Fixed: defaultZone not default-zone
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty: DEBUG
